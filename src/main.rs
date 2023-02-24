@@ -14,7 +14,7 @@ use mongodb::{
     Client, Collection,
 };
 use serde::{Deserialize, Serialize};
-use std::{fs};
+use std::fs;
 use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream};
 
@@ -31,19 +31,19 @@ static PWD: &str = "Admin123";
 #[actix_web::main] // or #[tokio::main]
 async fn main() -> std::io::Result<()> {
     let client = Client::with_uri_str("mongodb://localhost:27017")
-            .await
-            .expect("Unable to connect.");
+        .await
+        .expect("Unable to connect.");
     let db: Collection<Document> = client.database("rust-api").collection("apidata");
-    HttpServer::new(move|| {
+    HttpServer::new(move || {
         App::new()
-            .app_data(web::Data::new(db.clone()),)
+            .app_data(web::Data::new(db.clone()))
             .service(home)
             .service(new_user)
             .service(get_data)
             .service(user)
             .service(delete_user)
     })
-    .bind(("127.0.0.1",8080))?
+    .bind(("127.0.0.1", 8080))?
     .run()
     .await
 }
@@ -56,8 +56,12 @@ async fn home() -> impl Responder {
 }
 
 #[post("/add_user")]
-async fn new_user(crad: BasicAuth, val: Form<Details>, db: web::Data<Collection<Document>> ) -> impl Responder {
-    if crad.user_id().eq(USR) && crad.password().unwrap().eq(PWD) {
+async fn new_user(
+    db: web::Data<Collection<Document>>,
+    crad: BasicAuth,
+    val: Form<Details>,
+) -> impl Responder {
+    if crad.user_id() == USR && crad.password().unwrap() == PWD {
         let ins_data = doc! {
             "username":&val.username,
             "email":&val.email,
@@ -75,8 +79,12 @@ async fn new_user(crad: BasicAuth, val: Form<Details>, db: web::Data<Collection<
 }
 
 #[get("/user/{usrname}")]
-async fn user(crad: BasicAuth, usrname: web::Path<String>, db: web::Data<Collection<Document>>) -> impl Responder {
-    if crad.user_id().eq(USR) && crad.password().unwrap().eq(PWD) {
+async fn user(
+    db: web::Data<Collection<Document>>,
+    crad: BasicAuth,
+    usrname: web::Path<String>,
+) -> impl Responder {
+    if crad.user_id() == USR && crad.password().unwrap() == PWD {
         // match db.find_one(doc! {"username":usrname.to_string()}, None).await{
         //     Ok(Some(data)) => HttpResponse::Ok().json(data),
         //     Ok(None) =>{
@@ -98,8 +106,8 @@ async fn user(crad: BasicAuth, usrname: web::Path<String>, db: web::Data<Collect
 }
 
 #[get("/all_records")]
-async fn get_data(crad: BasicAuth, db: web::Data<Collection<Document>>) -> impl Responder {
-    if crad.user_id().eq(USR) && crad.password().unwrap().eq(PWD) {
+async fn get_data(db: web::Data<Collection<Document>>, crad: BasicAuth) -> impl Responder {
+    if crad.user_id() == USR && crad.password().unwrap() == PWD {
         let mut v = db.find(doc! {}, None).await.expect("Not found.");
         let mut vector: Vec<Document> = vec![];
         while let Some(Ok(r)) = v.next().await {
@@ -113,8 +121,12 @@ async fn get_data(crad: BasicAuth, db: web::Data<Collection<Document>>) -> impl 
 }
 
 #[get("/delete/{usrname}")]
-async fn delete_user(crad: BasicAuth, usrname: web::Path<String>, db: web::Data<Collection<Document>>) -> impl Responder {
-    if crad.user_id().eq(USR) && crad.password().unwrap().eq(PWD) {
+async fn delete_user(
+    db: web::Data<Collection<Document>>,
+    crad: BasicAuth,
+    usrname: web::Path<String>,
+) -> impl Responder {
+    if crad.user_id() == USR && crad.password().unwrap() == PWD {
         match db
             .delete_one(doc! {"username":usrname.to_string()}, None)
             .await
@@ -126,4 +138,3 @@ async fn delete_user(crad: BasicAuth, usrname: web::Path<String>, db: web::Data<
         HttpResponse::InternalServerError().body("Please enter valid credentials.")
     }
 }
-
