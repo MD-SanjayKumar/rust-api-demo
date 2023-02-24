@@ -76,8 +76,7 @@ async fn new_user(
             "name": &val.name,
             "address": &val.address
         };
-        let res = db.insert_one(ins_data, None).await;
-        match res {
+        match db.insert_one(ins_data, None).await {
             Ok(_) => HttpResponse::Ok().body("User added."),
             Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
         }
