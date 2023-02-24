@@ -25,10 +25,17 @@ pub struct Details {
     name: String,
     address: String,
 }
-static USR: &str = "Admin";
-static PWD: &str = "Admin123";
+static USR: &str = "admin";
+static PWD: &str = "admin123";
 
-#[actix_web::main] // or #[tokio::main]
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Update {
+    email: String,
+    name: String,
+    address: String,
+}
+
+#[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let client = Client::with_uri_str("mongodb://localhost:27017")
         .await
@@ -42,6 +49,7 @@ async fn main() -> std::io::Result<()> {
             .service(get_data)
             .service(user)
             .service(delete_user)
+            .service(update_user)
     })
     .bind(("127.0.0.1", 8080))?
     .run()
@@ -50,7 +58,7 @@ async fn main() -> std::io::Result<()> {
 
 #[get("/")]
 async fn home() -> impl Responder {
-    HttpResponse::build(StatusCode::OK)
+    HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
         .body(include_str!("../initial.html"))
 }
@@ -133,6 +141,37 @@ async fn delete_user(
         {
             Ok(_) => HttpResponse::Ok().body("Deleted record."),
             Err(_) => HttpResponse::InternalServerError().body("Not found."),
+        }
+    } else {
+        HttpResponse::InternalServerError().body("Please enter valid credentials.")
+    }
+}
+
+#[get("/update/{usrname}")]
+async fn update_user(
+    db: web::Data<Collection<Document>>,
+    crad: BasicAuth,
+    uval: Form<Update>,
+    usrname: web::Path<String>,
+) -> impl Responder {
+    if crad.user_id() == USR && crad.password().unwrap() == PWD {
+        let upd_data = doc! { "$set": {
+            "email":&uval.email,
+            "name": &uval.name,
+            "address": &uval.address }
+        };
+        match db
+            .update_one(
+                doc! {
+                   "username": usrname.to_string()
+                },
+                upd_data,
+                None,
+            )
+            .await
+        {
+            Ok(_) => HttpResponse::Ok().body("User updated."),
+            Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
         }
     } else {
         HttpResponse::InternalServerError().body("Please enter valid credentials.")
